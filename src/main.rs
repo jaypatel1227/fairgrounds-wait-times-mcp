@@ -61,7 +61,8 @@ impl TransportMode {
                          Env:\n  \
                          PORT / HOST          HTTP bind (default 0.0.0.0:8080)\n  \
                          MCP_TRANSPORT       http | stdio (overridden by flags)\n  \
-                         MCP_BEARER_TOKEN    required for HTTP; Authorization: Bearer <token>\n"
+                         MCP_BEARER_TOKEN    required for HTTP; Authorization: Bearer <token>\n  \
+                         MCP_ALLOWED_HOSTS   comma-separated Host allowlist, or * to disable\n"
                     );
                     std::process::exit(0);
                 }
@@ -111,6 +112,46 @@ fn load_bearer_token() -> Result<BearerToken> {
     Ok(BearerToken(Arc::from(token)))
 }
 
+/// DNS-rebinding protection in `rmcp` defaults to loopback-only Host headers.
+/// Public Railway / IPv6 deployments must allow the public hostname (or `*`).
+///
+/// Resolution order:
+/// 1. `MCP_ALLOWED_HOSTS=*` → disable Host checks (bearer auth still required)
+/// 2. `MCP_ALLOWED_HOSTS=host1,host2` → explicit allowlist
+/// 3. else start from loopback defaults, plus `RAILWAY_PUBLIC_DOMAIN` when set
+fn resolve_allowed_hosts() -> Option<Vec<String>> {
+    if let Ok(raw) = env::var("MCP_ALLOWED_HOSTS") {
+        let trimmed = raw.trim();
+        if trimmed == "*" {
+            return None; // disable allowlist
+        }
+        let hosts: Vec<String> = trimmed
+            .split(',')
+            .map(str::trim)
+            .filter(|h| !h.is_empty())
+            .map(str::to_string)
+            .collect();
+        if !hosts.is_empty() {
+            return Some(hosts);
+        }
+    }
+
+    let mut hosts = vec![
+        "localhost".to_string(),
+        "127.0.0.1".to_string(),
+        "::1".to_string(),
+    ];
+
+    if let Ok(domain) = env::var("RAILWAY_PUBLIC_DOMAIN") {
+        let domain = domain.trim();
+        if !domain.is_empty() {
+            hosts.push(domain.to_string());
+        }
+    }
+
+    Some(hosts)
+}
+
 async fn run_http() -> Result<()> {
     let bearer = load_bearer_token()?;
 
@@ -127,9 +168,23 @@ async fn run_http() -> Result<()> {
     // - no Mcp-Session-Id affinity → safe for Railway serverless / multi-instance
     // - json_response for simple tool request/response without SSE
     // - fresh FairgroundsServer per request (no in-memory session state)
-    let config = StreamableHttpServerConfig::default()
+    let mut config = StreamableHttpServerConfig::default()
         .with_legacy_session_mode(false)
         .with_json_response(true);
+
+    match resolve_allowed_hosts() {
+        None => {
+            tracing::warn!(
+                "MCP_ALLOWED_HOSTS=* — Host header checks disabled \
+                 (DNS-rebinding protection off; bearer auth still enforced)"
+            );
+            config = config.disable_allowed_hosts();
+        }
+        Some(hosts) => {
+            tracing::info!(?hosts, "Streamable HTTP allowed Host headers");
+            config = config.with_allowed_hosts(hosts);
+        }
+    }
 
     let mcp: StreamableHttpService<FairgroundsServer, LocalSessionManager> =
         StreamableHttpService::new(

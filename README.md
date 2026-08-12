@@ -71,6 +71,9 @@ Env:
 | `PORT` | `8080` | Bind port (Railway sets this) |
 | `MCP_TRANSPORT` | `http` | `http` or `stdio` |
 | `MCP_BEARER_TOKEN` | _(required for HTTP)_ | Shared secret for `Authorization: Bearer …` |
+| `MCP_ALLOWED_HOSTS` | loopback + `RAILWAY_PUBLIC_DOMAIN` | Comma-separated `Host` allowlist for DNS-rebinding protection. Use `*` to allow any Host (still requires bearer). |
+
+`rmcp` rejects non-allowlisted `Host` headers with `403 Forbidden: Host header is not allowed`. Locally that only accepts `localhost` / `127.0.0.1` / `::1`. On Railway, `RAILWAY_PUBLIC_DOMAIN` is added automatically. If you hit the service by raw IPv6 (or another hostname), either include that Host value in `MCP_ALLOWED_HOSTS` or set `MCP_ALLOWED_HOSTS=*`.
 
 Agent Factory MCP Config Example:
 
@@ -82,8 +85,9 @@ Agent Factory MCP Config Example:
 2. New Railway project → Deploy from repo (uses `Dockerfile` + `railway.toml`).
 3. Railway injects `PORT`; the container binds `0.0.0.0:$PORT`.
 4. Set Railway variable **`MCP_BEARER_TOKEN`** to a long random secret (share only with Epic).
-5. Health check: `GET /health` (no auth).
-6. MCP URL: `https://<service>.up.railway.app/mcp` with `Authorization: Bearer <token>`.
+5. Prefer the public HTTPS domain (`https://<service>.up.railway.app/mcp`) — `RAILWAY_PUBLIC_DOMAIN` is allowlisted automatically. For raw IPv6 / custom Host, set **`MCP_ALLOWED_HOSTS`** to that Host (or `*`).
+6. Health check: `GET /health` (no auth).
+7. MCP URL: `https://<service>.up.railway.app/mcp` with `Authorization: Bearer <token>`.
 
 ```bash
 # optional local container check
