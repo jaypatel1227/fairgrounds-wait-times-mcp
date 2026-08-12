@@ -1,10 +1,11 @@
-//! HTTP bearer-token gate + Accept-header shim for the public `/mcp` endpoint.
+//! HTTP bearer-token gate + request shims for the public `/mcp` endpoint.
 
 use std::sync::Arc;
 
 use axum::{
+    body::{Body, Bytes},
     extract::{Request, State},
-    http::{header, HeaderValue, StatusCode},
+    http::{header, HeaderValue, Method, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
 };
@@ -12,6 +13,10 @@ use axum::{
 const JSON_MIME: &str = "application/json";
 const EVENT_STREAM_MIME: &str = "text/event-stream";
 const MCP_ACCEPT: &str = "application/json, text/event-stream";
+const MAX_BODY_BYTES: usize = 1024 * 1024;
+
+/// Used when a client POSTs an empty body (connectivity probes, misconfigured tools).
+const DEFAULT_INITIALIZE: &[u8] = br#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"anonymous","version":"0.0.0"}}}"#;
 
 /// Expected bearer secret from `MCP_BEARER_TOKEN`.
 #[derive(Clone)]
@@ -41,12 +46,60 @@ pub async fn require_bearer(
     }
 }
 
-/// `rmcp` Streamable HTTP rejects POSTs unless `Accept` contains both
-/// `application/json` and `text/event-stream`. Some clients (and intermediate
-/// proxies) only send JSON — fill in the missing type so the demo still works.
-pub async fn ensure_mcp_accept(mut request: Request, next: Next) -> Response {
-    normalize_accept(request.headers_mut());
+/// Soften Streamable HTTP request requirements for imperfect clients:
+/// - Ensure `Accept` lists both `application/json` and `text/event-stream`
+/// - Ensure `Content-Type: application/json` on POST
+/// - Replace an empty POST body with a default `initialize` request
+pub async fn ensure_mcp_request(request: Request, next: Next) -> Response {
+    if request.method() != Method::POST {
+        let mut request = request;
+        normalize_accept(request.headers_mut());
+        return next.run(request).await;
+    }
+
+    let (mut parts, body) = request.into_parts();
+    let bytes = match axum::body::to_bytes(body, MAX_BODY_BYTES).await {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            return (
+                StatusCode::PAYLOAD_TOO_LARGE,
+                format!("request body exceeds {MAX_BODY_BYTES} bytes"),
+            )
+                .into_response();
+        }
+    };
+
+    let bytes = if body_is_empty(&bytes) {
+        tracing::warn!(
+            "empty POST /mcp body — substituting default initialize JSON-RPC request"
+        );
+        Bytes::from_static(DEFAULT_INITIALIZE)
+    } else {
+        bytes
+    };
+
+    normalize_accept(&mut parts.headers);
+    ensure_json_content_type(&mut parts.headers);
+
+    let request = Request::from_parts(parts, Body::from(bytes));
     next.run(request).await
+}
+
+fn body_is_empty(bytes: &Bytes) -> bool {
+    bytes.is_empty() || bytes.iter().all(|b| b.is_ascii_whitespace())
+}
+
+fn ensure_json_content_type(headers: &mut axum::http::HeaderMap) {
+    let ok = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.starts_with(JSON_MIME));
+    if !ok {
+        headers.insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json"),
+        );
+    }
 }
 
 fn normalize_accept(headers: &mut axum::http::HeaderMap) {
@@ -140,5 +193,18 @@ mod tests {
             headers.get(header::ACCEPT).unwrap(),
             "application/json, text/event-stream"
         );
+    }
+
+    #[test]
+    fn empty_body_detection() {
+        assert!(body_is_empty(&Bytes::new()));
+        assert!(body_is_empty(&Bytes::from_static(b"  \n\t")));
+        assert!(!body_is_empty(&Bytes::from_static(b"{}")));
+    }
+
+    #[test]
+    fn default_initialize_is_valid_json() {
+        let v: serde_json::Value = serde_json::from_slice(DEFAULT_INITIALIZE).unwrap();
+        assert_eq!(v["method"], "initialize");
     }
 }

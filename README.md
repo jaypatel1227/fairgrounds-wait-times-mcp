@@ -27,7 +27,7 @@ Content-Type: application/json
 Accept: application/json, text/event-stream
 ```
 
-If `Accept` is missing either MIME type, the server adds it (Streamable HTTP requires both; some clients only send JSON).
+If `Accept` is missing either MIME type, the server adds it (Streamable HTTP requires both; some clients only send JSON). An empty POST body is treated as a default `initialize` request (for probes / misconfigured clients).
 
 `GET /health` is intentionally public so Railway healthchecks work without the secret.
 
