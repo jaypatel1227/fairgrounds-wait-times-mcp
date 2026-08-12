@@ -1,13 +1,17 @@
-//! HTTP bearer-token gate for the public `/mcp` endpoint.
+//! HTTP bearer-token gate + Accept-header shim for the public `/mcp` endpoint.
 
 use std::sync::Arc;
 
 use axum::{
     extract::{Request, State},
-    http::{header, StatusCode},
+    http::{header, HeaderValue, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
 };
+
+const JSON_MIME: &str = "application/json";
+const EVENT_STREAM_MIME: &str = "text/event-stream";
+const MCP_ACCEPT: &str = "application/json, text/event-stream";
 
 /// Expected bearer secret from `MCP_BEARER_TOKEN`.
 #[derive(Clone)]
@@ -37,6 +41,44 @@ pub async fn require_bearer(
     }
 }
 
+/// `rmcp` Streamable HTTP rejects POSTs unless `Accept` contains both
+/// `application/json` and `text/event-stream`. Some clients (and intermediate
+/// proxies) only send JSON — fill in the missing type so the demo still works.
+pub async fn ensure_mcp_accept(mut request: Request, next: Next) -> Response {
+    normalize_accept(request.headers_mut());
+    next.run(request).await
+}
+
+fn normalize_accept(headers: &mut axum::http::HeaderMap) {
+    let current = headers
+        .get(header::ACCEPT)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let has_json = current.contains(JSON_MIME);
+    let has_sse = current.contains(EVENT_STREAM_MIME);
+    if has_json && has_sse {
+        return;
+    }
+
+    let value = if current.trim().is_empty() || current.trim() == "*/*" {
+        MCP_ACCEPT.to_string()
+    } else {
+        let mut parts = vec![current.trim().to_string()];
+        if !has_json {
+            parts.push(JSON_MIME.to_string());
+        }
+        if !has_sse {
+            parts.push(EVENT_STREAM_MIME.to_string());
+        }
+        parts.join(", ")
+    };
+
+    if let Ok(hv) = HeaderValue::from_str(&value) {
+        headers.insert(header::ACCEPT, hv);
+    }
+}
+
 fn parse_bearer(value: &str) -> Option<&str> {
     let token = value
         .strip_prefix("Bearer ")
@@ -59,6 +101,7 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::http::HeaderMap;
 
     #[test]
     fn accepts_bearer_prefix() {
@@ -73,5 +116,29 @@ mod tests {
         assert!(constant_time_eq(b"abc", b"abc"));
         assert!(!constant_time_eq(b"abc", b"abd"));
         assert!(!constant_time_eq(b"abc", b"ab"));
+    }
+
+    #[test]
+    fn fills_missing_accept_types() {
+        let mut headers = HeaderMap::new();
+        normalize_accept(&mut headers);
+        assert_eq!(headers.get(header::ACCEPT).unwrap(), MCP_ACCEPT);
+
+        let mut headers = HeaderMap::new();
+        headers.insert(header::ACCEPT, HeaderValue::from_static("application/json"));
+        normalize_accept(&mut headers);
+        let v = headers.get(header::ACCEPT).unwrap().to_str().unwrap();
+        assert!(v.contains(JSON_MIME) && v.contains(EVENT_STREAM_MIME));
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::ACCEPT,
+            HeaderValue::from_static("application/json, text/event-stream"),
+        );
+        normalize_accept(&mut headers);
+        assert_eq!(
+            headers.get(header::ACCEPT).unwrap(),
+            "application/json, text/event-stream"
+        );
     }
 }

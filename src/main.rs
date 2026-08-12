@@ -15,7 +15,7 @@ use rmcp::{
 };
 use tracing_subscriber::{prelude::*, EnvFilter};
 
-use auth::{require_bearer, BearerToken};
+use auth::{ensure_mcp_accept, require_bearer, BearerToken};
 use server::FairgroundsServer;
 
 #[tokio::main]
@@ -193,9 +193,11 @@ async fn run_http() -> Result<()> {
             config,
         );
 
-    // Bearer auth wraps /mcp only. /health stays open for Railway healthchecks.
+    // Bearer auth + Accept shim wrap /mcp only. /health stays open for Railway.
+    // Outer layers run first: auth → Accept normalize → rmcp.
     let protected_mcp = Router::new()
         .fallback_service(mcp)
+        .layer(middleware::from_fn(ensure_mcp_accept))
         .layer(middleware::from_fn_with_state(bearer, require_bearer));
 
     let app = Router::new()

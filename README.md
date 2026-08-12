@@ -27,6 +27,8 @@ Content-Type: application/json
 Accept: application/json, text/event-stream
 ```
 
+If `Accept` is missing either MIME type, the server adds it (Streamable HTTP requires both; some clients only send JSON).
+
 `GET /health` is intentionally public so Railway healthchecks work without the secret.
 
 ```bash
