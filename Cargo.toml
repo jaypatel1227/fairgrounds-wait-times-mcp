@@ -1,0 +1,18 @@
+[package]
+name = "fairgrounds-wait-times-mcp"
+version = "0.1.0"
+edition = "2024"
+description = "UGM 2027 demo MCP server: fairgrounds wait times, venues, and top sellers"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1.0.104"
+axum = { version = "0.8.9", default-features = false, features = ["tokio", "http1"] }
+rmcp = { version = "3.1.2", features = ["server", "transport-io", "transport-streamable-http-server"] }
+schemars = "1.2.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "io-std", "net", "signal"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
