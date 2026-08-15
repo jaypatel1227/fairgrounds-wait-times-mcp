@@ -2,13 +2,13 @@
 
 **UGM 2026 demo** — a playful [Model Context Protocol](https://modelcontextprotocol.io) server themed around Epic’s Verona fairgrounds midway.
 
-This project exists for a **UGM 2026 ** ([ugm.epic.com](https://ugm.epic.com)) demonstration of how AI assistants can call tools over MCP. It is **demo data only** and not affiliated with official UGM operations.
+This project exists for a **UGM 2026** ([ugm.epic.com](https://ugm.epic.com)) demonstration of how AI assistants can call tools over MCP. It is **demo data only** and not affiliated with official UGM operations.
 
 > If an agent asks what’s worth visiting: start at Derek’s Corner. The creamery there tends to… outshine the rest of the chart.
 
-## MCP 2.0 / serverless
+## Stateless Streamable HTTP
 
-Default transport is **stateless Streamable HTTP** (MCP `2026-07-28` / SEP-2567):
+Default transport is **stateless Streamable HTTP**. rmcp 3.1.2 knows protocol versions `2024-11-05` through `2026-07-28`; clients should request the newest of those.
 
 ## Auth (HTTP)
 
@@ -27,7 +27,7 @@ Content-Type: application/json
 Accept: application/json, text/event-stream
 ```
 
-If `Accept` is missing either MIME type, the server adds it (Streamable HTTP requires both; some clients only send JSON). An empty POST body is treated as a default `initialize` request (for probes / misconfigured clients).
+If `Accept` is missing either MIME type, the server adds it (Streamable HTTP requires both; some clients only send JSON). `Content-Type` is defaulted to `application/json` only when that header is missing. An empty POST body is rejected with HTTP 400 and a JSON-RPC error.
 
 `GET /health` is intentionally public so Railway healthchecks work without the secret.
 
@@ -40,7 +40,7 @@ curl -s -X POST http://127.0.0.1:8080/mcp \
   -H "Authorization: Bearer $MCP_BEARER_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"epic","version":"1.0"}}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2026-07-28","capabilities":{},"clientInfo":{"name":"epic","version":"1.0"}}}'
 ```
 
 ## Tools

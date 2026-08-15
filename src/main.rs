@@ -9,7 +9,7 @@ use axum::{middleware, routing::get, Router};
 use rmcp::{
     transport::stdio,
     transport::streamable_http_server::{
-        session::local::LocalSessionManager, StreamableHttpServerConfig, StreamableHttpService,
+        session::never::NeverSessionManager, StreamableHttpServerConfig, StreamableHttpService,
     },
     ServiceExt,
 };
@@ -54,7 +54,7 @@ impl TransportMode {
                 "--http" | "http" => return Self::Http,
                 "--help" | "-h" => {
                     eprintln!(
-                        "Fairgrounds Wait Times MCP (UGM 2027 demo)\n\n\
+                        "Fairgrounds Wait Times MCP (UGM 2026 demo)\n\n\
                          Usage:\n  \
                          fairgrounds-wait-times-mcp [--http]   # default: stateless Streamable HTTP\n  \
                          fairgrounds-wait-times-mcp --stdio    # stdio transport for local clients\n\n\
@@ -85,7 +85,7 @@ impl TransportMode {
 }
 
 async fn run_stdio() -> Result<()> {
-    tracing::info!("Starting Fairgrounds Wait Times MCP (stdio) — UGM 2027 demo");
+    tracing::info!("Starting Fairgrounds Wait Times MCP (stdio) — UGM 2026 demo");
 
     let service = FairgroundsServer
         .serve(stdio())
@@ -165,9 +165,10 @@ async fn run_http() -> Result<()> {
         .with_context(|| format!("invalid bind address {host}:{port}"))?;
 
     // Stateless Streamable HTTP (SEP-2567 / MCP 2026-07-28):
+    // - NeverSessionManager rejects session create/lookup (no in-memory sessions)
     // - no Mcp-Session-Id affinity → safe for Railway serverless / multi-instance
     // - json_response for simple tool request/response without SSE
-    // - fresh FairgroundsServer per request (no in-memory session state)
+    // - fresh FairgroundsServer per request
     let mut config = StreamableHttpServerConfig::default()
         .with_legacy_session_mode(false)
         .with_json_response(true);
@@ -186,10 +187,10 @@ async fn run_http() -> Result<()> {
         }
     }
 
-    let mcp: StreamableHttpService<FairgroundsServer, LocalSessionManager> =
+    let mcp: StreamableHttpService<FairgroundsServer, NeverSessionManager> =
         StreamableHttpService::new(
             || Ok(FairgroundsServer),
-            Arc::new(LocalSessionManager::default()),
+            Arc::new(NeverSessionManager::default()),
             config,
         );
 
@@ -205,7 +206,7 @@ async fn run_http() -> Result<()> {
         .route(
             "/",
             get(|| async {
-                "Fairgrounds Wait Times MCP — UGM 2027 demo. POST /mcp with Authorization: Bearer <token>"
+                "Fairgrounds Wait Times MCP — UGM 2026 demo. POST /mcp with Authorization: Bearer <token>"
             }),
         )
         .nest("/mcp", protected_mcp);
@@ -216,7 +217,7 @@ async fn run_http() -> Result<()> {
 
     tracing::info!(
         %addr,
-        "Fairgrounds Wait Times MCP listening (stateless Streamable HTTP + bearer auth) — UGM 2027 demo"
+        "Fairgrounds Wait Times MCP listening (stateless Streamable HTTP + bearer auth) — UGM 2026 demo"
     );
     tracing::info!("MCP endpoint: http://{addr}/mcp  health: http://{addr}/health");
 

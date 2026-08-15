@@ -2,7 +2,7 @@
 name = "fairgrounds-wait-times-mcp"
 version = "0.1.0"
 edition = "2024"
-description = "UGM 2027 demo MCP server: fairgrounds wait times, venues, and top sellers"
+description = "UGM 2026 demo MCP server: fairgrounds wait times, venues, and top sellers"
 license = "MIT"
 readme = "README.md"
 
