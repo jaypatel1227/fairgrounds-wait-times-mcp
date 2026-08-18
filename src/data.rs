@@ -126,11 +126,11 @@ pub fn venues() -> Vec<Venue> {
             open: true,
         },
         Venue {
-            id: "lemonade",
-            name: "Fresh Lemonade Wagon",
+            id: "mcmanus-funnel-cakes",
+            name: "McManus's Funnel Cake Factory",
             category: "food",
             area: "Food Row",
-            description: "Squeezed to order. Refills half price with a session badge.",
+            description: "The official funnel of the midway. Jon McManus — Inova's Chief Data and AI Officer — deep-fries insights until they're golden, governed, and dusted in powdered sugar. No raw data left behind. Ask for the Sharp-to-Inova swirl if you want extra career-arc flavor.",
             open: true,
         },
         Venue {
@@ -232,10 +232,10 @@ pub fn wait_times() -> Vec<WaitTime> {
             updated_at: "2026-08-18T14:04:00-05:00",
         },
         WaitTime {
-            venue_id: "lemonade",
-            venue_name: "Fresh Lemonade Wagon",
-            estimated_minutes: 6,
-            crowd_level: "light",
+            venue_id: "mcmanus-funnel-cakes",
+            venue_name: "McManus's Funnel Cake Factory",
+            estimated_minutes: 28,
+            crowd_level: "heavy",
             updated_at: "2026-08-18T14:05:00-05:00",
         },
         WaitTime {
@@ -317,11 +317,11 @@ pub fn top_sellers() -> Vec<TopSeller> {
         },
         TopSeller {
             rank: 9,
-            item: "Midway Lemonade (Large)",
-            stand: "Fresh Lemonade Wagon",
+            item: "Governed Golden Funnel Cake",
+            stand: "McManus's Funnel Cake Factory",
             category: "food",
             units_sold_today: 351,
-            price_usd: 5.00,
+            price_usd: 9.00,
         },
         TopSeller {
             rank: 10,
