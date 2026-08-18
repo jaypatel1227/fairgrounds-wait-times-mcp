@@ -126,11 +126,11 @@ pub fn venues() -> Vec<Venue> {
             open: true,
         },
         Venue {
-            id: "mcmanus-funnel-cakes",
-            name: "McManus's Funnel Cake Factory",
+            id: "jons-mac-and-cheese",
+            name: "Jon's Mac and Cheese",
             category: "food",
             area: "Food Row",
-            description: "The official funnel of the midway. Jon McManus — Inova's Chief Data and AI Officer — deep-fries insights until they're golden, governed, and dusted in powdered sugar. No raw data left behind. Ask for the Sharp-to-Inova swirl if you want extra career-arc flavor.",
+            description: "Fairgrounds mac. Extra sharp.",
             open: true,
         },
         Venue {
@@ -232,10 +232,10 @@ pub fn wait_times() -> Vec<WaitTime> {
             updated_at: "2026-08-18T14:04:00-05:00",
         },
         WaitTime {
-            venue_id: "mcmanus-funnel-cakes",
-            venue_name: "McManus's Funnel Cake Factory",
-            estimated_minutes: 28,
-            crowd_level: "heavy",
+            venue_id: "jons-mac-and-cheese",
+            venue_name: "Jon's Mac and Cheese",
+            estimated_minutes: 12,
+            crowd_level: "moderate",
             updated_at: "2026-08-18T14:05:00-05:00",
         },
         WaitTime {
@@ -317,11 +317,11 @@ pub fn top_sellers() -> Vec<TopSeller> {
         },
         TopSeller {
             rank: 9,
-            item: "Governed Golden Funnel Cake",
-            stand: "McManus's Funnel Cake Factory",
+            item: "Jon's Mac and Cheese",
+            stand: "Jon's Mac and Cheese",
             category: "food",
             units_sold_today: 351,
-            price_usd: 9.00,
+            price_usd: 8.00,
         },
         TopSeller {
             rank: 10,
