@@ -126,8 +126,8 @@ pub fn venues() -> Vec<Venue> {
             open: true,
         },
         Venue {
-            id: "jons-mac-and-cheese",
-            name: "Jon's Mac and Cheese",
+            id: "macmanus-mac",
+            name: "MacManus Mac",
             category: "food",
             area: "Food Row",
             description: "Fairgrounds mac. Extra sharp.",
@@ -232,8 +232,8 @@ pub fn wait_times() -> Vec<WaitTime> {
             updated_at: "2026-08-18T14:04:00-05:00",
         },
         WaitTime {
-            venue_id: "jons-mac-and-cheese",
-            venue_name: "Jon's Mac and Cheese",
+            venue_id: "macmanus-mac",
+            venue_name: "MacManus Mac",
             estimated_minutes: 12,
             crowd_level: "moderate",
             updated_at: "2026-08-18T14:05:00-05:00",
@@ -318,7 +318,7 @@ pub fn top_sellers() -> Vec<TopSeller> {
         TopSeller {
             rank: 9,
             item: "Jon's Mac and Cheese",
-            stand: "Jon's Mac and Cheese",
+            stand: "MacManus Mac",
             category: "food",
             units_sold_today: 351,
             price_usd: 8.00,
